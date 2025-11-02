@@ -15,12 +15,13 @@ class AddEditNoteScreen extends StatefulWidget {
 class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   final _controller = TextEditingController();
   bool _isSaving = false;
+  bool _isEditable = false; // 👈 new state to control editability
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     if (widget.note != null) {
-      // Combine title and content into single controller
       final combined =
           widget.note!.title +
           (widget.note!.content.isNotEmpty ? '\n${widget.note!.content}' : '');
@@ -31,6 +32,7 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -85,37 +87,57 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
     }
   }
 
+  void _enableEditing() {
+    setState(() => _isEditable = true);
+    // Focus the TextField automatically
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _focusNode.requestFocus();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Freehand Note'),
-        actions: [
-          if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+    return GestureDetector(
+      onTap: _isEditable
+          ? null
+          : _enableEditing, // 👈 tap anywhere to enable edit
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Freehand Note'),
+          actions: [
+            if (_isSaving)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              IconButton(icon: const Icon(Icons.check), onPressed: _saveNote),
+          ],
+        ),
+        body: AbsorbPointer(
+          absorbing: !_isEditable, // 👈 disable touch input when not editable
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              maxLines: null,
+              autofocus: false,
+              keyboardType: TextInputType.multiline,
+              textCapitalization: TextCapitalization.sentences,
+              style: const TextStyle(fontSize: 18),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: _isEditable
+                    ? 'Start writing your note...'
+                    : 'Tap anywhere to edit...',
               ),
-            )
-          else
-            IconButton(icon: const Icon(Icons.check), onPressed: _saveNote),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: TextField(
-          controller: _controller,
-          maxLines: null,
-          autofocus: true,
-          keyboardType: TextInputType.multiline,
-          textCapitalization: TextCapitalization.sentences,
-          style: const TextStyle(fontSize: 18),
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            hintText: 'Start writing your note...',
+            ),
           ),
         ),
       ),
