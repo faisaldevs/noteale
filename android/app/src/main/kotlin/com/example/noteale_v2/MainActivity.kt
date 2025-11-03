@@ -1,4 +1,4 @@
-package com.example.noteale_v2
+package com.noteale.app
 
 import io.flutter.embedding.android.FlutterActivity
 
