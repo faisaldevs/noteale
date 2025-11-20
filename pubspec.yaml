@@ -4,7 +4,7 @@ description: "A new Flutter project."
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+2
+version: 1.0.2+3
 
 environment:
   sdk: ^3.8.1
@@ -20,9 +20,15 @@ dependencies:
   # Local Database
   sqflite: ^2.3.0
   path_provider: ^2.1.1
-  
+  shared_preferences: ^2.5.3
+
   # Date Formatting
   intl: ^0.18.1
+
+  # app core
+  in_app_update: ^4.2.5 
+  package_info_plus: ^9.0.0
+
   
   # UI
   cupertino_icons: ^1.0.2

@@ -10,11 +10,20 @@ class NotesProvider with ChangeNotifier {
   bool _isLoading = false;
   String _searchQuery = '';
   SortOption _sortOption = SortOption.dateModified;
+  String? _selectedCategory;
+  bool _showFavoritesOnly = false;
 
   List<Note> get notes => _filteredNotes;
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   SortOption get sortOption => _sortOption;
+  String? get selectedCategory => _selectedCategory;
+  bool get showFavoritesOnly => _showFavoritesOnly;
+
+  // Statistics
+  int get totalNotes => _notes.length;
+  int get pinnedNotes => _notes.where((n) => n.isPinned).length;
+  int get favoriteNotes => _notes.where((n) => n.isFavorite).length;
 
   NotesProvider() {
     loadNotes();
@@ -78,6 +87,18 @@ class NotesProvider with ChangeNotifier {
     }
   }
 
+  /// Toggle pin status
+  Future<void> togglePin(Note note) async {
+    final updatedNote = note.copyWith(isPinned: !note.isPinned);
+    await updateNote(updatedNote);
+  }
+
+  /// Toggle favorite status
+  Future<void> toggleFavorite(Note note) async {
+    final updatedNote = note.copyWith(isFavorite: !note.isFavorite);
+    await updateNote(updatedNote);
+  }
+
   /// Search notes by query
   void searchNotes(String query) {
     _searchQuery = query.trim();
@@ -99,33 +120,92 @@ class NotesProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Filter by category
+  void setCategory(String? category) {
+    _selectedCategory = category;
+    _applyFiltersAndSort();
+    notifyListeners();
+  }
+
+  /// Toggle favorites filter
+  void toggleFavoritesFilter() {
+    _showFavoritesOnly = !_showFavoritesOnly;
+    _applyFiltersAndSort();
+    notifyListeners();
+  }
+
+  /// Get all unique categories
+  List<String> getCategories() {
+    final categories = <String>{};
+    for (var note in _notes) {
+      if (note.category != null && note.category!.isNotEmpty) {
+        categories.add(note.category!);
+      }
+    }
+    return categories.toList()..sort();
+  }
+
   /// Apply search filter and sort
   void _applyFiltersAndSort() {
+    _filteredNotes = List.from(_notes);
+
+    // Apply favorites filter
+    if (_showFavoritesOnly) {
+      _filteredNotes = _filteredNotes.where((note) => note.isFavorite).toList();
+    }
+
+    // Apply category filter
+    if (_selectedCategory != null) {
+      _filteredNotes = _filteredNotes
+          .where((note) => note.category == _selectedCategory)
+          .toList();
+    }
+
     // Apply search filter
-    if (_searchQuery.isEmpty) {
-      _filteredNotes = List.from(_notes);
-    } else {
+    if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
-      _filteredNotes = _notes.where((note) {
+      _filteredNotes = _filteredNotes.where((note) {
         return note.title.toLowerCase().contains(query) ||
             note.content.toLowerCase().contains(query) ||
-            (note.tags?.toLowerCase().contains(query) ?? false);
+            (note.tags?.toLowerCase().contains(query) ?? false) ||
+            (note.category?.toLowerCase().contains(query) ?? false);
       }).toList();
     }
 
     // Apply sort
     switch (_sortOption) {
       case SortOption.dateModified:
-        _filteredNotes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        _filteredNotes.sort((a, b) {
+          // Pinned notes always on top
+          if (a.isPinned != b.isPinned) {
+            return a.isPinned ? -1 : 1;
+          }
+          return b.updatedAt.compareTo(a.updatedAt);
+        });
         break;
       case SortOption.dateCreated:
-        _filteredNotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _filteredNotes.sort((a, b) {
+          if (a.isPinned != b.isPinned) {
+            return a.isPinned ? -1 : 1;
+          }
+          return b.createdAt.compareTo(a.createdAt);
+        });
         break;
       case SortOption.titleAZ:
-        _filteredNotes.sort((a, b) => a.title.compareTo(b.title));
+        _filteredNotes.sort((a, b) {
+          if (a.isPinned != b.isPinned) {
+            return a.isPinned ? -1 : 1;
+          }
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        });
         break;
       case SortOption.titleZA:
-        _filteredNotes.sort((a, b) => b.title.compareTo(a.title));
+        _filteredNotes.sort((a, b) {
+          if (a.isPinned != b.isPinned) {
+            return a.isPinned ? -1 : 1;
+          }
+          return b.title.toLowerCase().compareTo(a.title.toLowerCase());
+        });
         break;
     }
   }
@@ -137,6 +217,23 @@ class NotesProvider with ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Get statistics
+  Future<Map<String, int>> getStatistics() async {
+    return await DatabaseHelper.instance.getStatistics();
+  }
+
+  /// Duplicate a note
+  Future<void> duplicateNote(Note note) async {
+    final duplicated = note.copyWith(
+      id: null,
+      title: '${note.title} (Copy)',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isPinned: false,
+    );
+    await addNote(duplicated);
   }
 }
 

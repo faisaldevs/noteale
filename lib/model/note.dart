@@ -6,6 +6,11 @@ class Note {
   final String? tags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isPinned;
+  final String? color;
+  final bool isFavorite;
+  final String? category;
+  final List<String>? attachments;
 
   Note({
     this.id,
@@ -14,6 +19,11 @@ class Note {
     this.tags,
     required this.createdAt,
     required this.updatedAt,
+    this.isPinned = false,
+    this.color,
+    this.isFavorite = false,
+    this.category,
+    this.attachments,
   });
 
   /// Convert Note object to Map for database storage
@@ -25,6 +35,11 @@ class Note {
       'tags': tags,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'isPinned': isPinned ? 1 : 0,
+      'color': color,
+      'isFavorite': isFavorite ? 1 : 0,
+      'category': category,
+      'attachments': attachments?.join('|'),
     };
   }
 
@@ -37,6 +52,13 @@ class Note {
       tags: map['tags'] as String?,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
+      isPinned: (map['isPinned'] as int?) == 1,
+      color: map['color'] as String?,
+      isFavorite: (map['isFavorite'] as int?) == 1,
+      category: map['category'] as String?,
+      attachments: map['attachments'] != null
+          ? (map['attachments'] as String).split('|')
+          : null,
     );
   }
 
@@ -48,6 +70,11 @@ class Note {
     String? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isPinned,
+    String? color,
+    bool? isFavorite,
+    String? category,
+    List<String>? attachments,
   }) {
     return Note(
       id: id ?? this.id,
@@ -56,6 +83,11 @@ class Note {
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isPinned: isPinned ?? this.isPinned,
+      color: color ?? this.color,
+      isFavorite: isFavorite ?? this.isFavorite,
+      category: category ?? this.category,
+      attachments: attachments ?? this.attachments,
     );
   }
 
@@ -65,4 +97,10 @@ class Note {
     if (content.length <= maxLength) return content;
     return '${content.substring(0, maxLength)}...';
   }
+
+  /// Get word count
+  int get wordCount => content.trim().split(RegExp(r'\s+')).length;
+
+  /// Get character count
+  int get characterCount => content.length;
 }

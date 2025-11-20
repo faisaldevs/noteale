@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:noteale_v2/providers/note_provider.dart';
+import 'package:noteale_v2/providers/setting_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const DailyNotesApp());
 }
 
@@ -18,6 +20,7 @@ class DailyNotesApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => NotesProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()..initialize()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
@@ -30,6 +33,12 @@ class DailyNotesApp extends StatelessWidget {
                 brightness: Brightness.light,
               ),
               useMaterial3: true,
+              cardTheme: CardThemeData(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
@@ -37,6 +46,12 @@ class DailyNotesApp extends StatelessWidget {
                 brightness: Brightness.dark,
               ),
               useMaterial3: true,
+              cardTheme: CardThemeData(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
             themeMode: themeProvider.themeMode,
             home: const HomeScreen(),
