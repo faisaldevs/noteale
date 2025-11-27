@@ -1,3 +1,261 @@
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:noteale_v2/core/version_checker_v2.dart';
+// import 'package:noteale_v2/providers/note_provider.dart';
+// import 'package:noteale_v2/providers/setting_provider.dart';
+// import 'package:noteale_v2/screens/filter_drawer.dart';
+// import 'package:noteale_v2/screens/setting_screen.dart';
+// import 'package:noteale_v2/widgets/note_grid_item.dart';
+// import 'package:provider/provider.dart';
+
+// import '../widgets/empty_state.dart';
+// import '../widgets/note_card.dart';
+// import 'add_edit_note_screen.dart';
+
+// /// Home screen displaying list of all notes
+// class HomeScreen extends StatefulWidget {
+//   const HomeScreen({super.key});
+
+//   @override
+//   State<HomeScreen> createState() => _HomeScreenState();
+// }
+
+// class _HomeScreenState extends State<HomeScreen> {
+//   final TextEditingController _searchController = TextEditingController();
+//   bool _isSearching = false;
+//   @override
+//   void initState() {
+//     super.initState();
+
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       if (kDebugMode) {
+//         // Mock for testing
+//         PlayStoreUpdateChecker.showMockUpdateDialog(context);
+//       } else {
+//         PlayStoreUpdateChecker.checkForUpdate(context);
+//       }
+//     });
+//   }
+
+//   @override
+//   void dispose() {
+//     _searchController.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final settings = context.watch<SettingsProvider>();
+
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: _isSearching
+//             ? TextField(
+//                 controller: _searchController,
+//                 autofocus: true,
+//                 decoration: const InputDecoration(
+//                   hintText: 'Search notes...',
+//                   border: InputBorder.none,
+//                 ),
+//                 onChanged: (value) {
+//                   context.read<NotesProvider>().searchNotes(value);
+//                 },
+//               )
+//             : const Text('DailyNotes'),
+//         leading: Builder(
+//           builder: (context) => IconButton(
+//             icon: const Icon(Icons.menu),
+//             onPressed: () => Scaffold.of(context).openDrawer(),
+//           ),
+//         ),
+//         actions: [
+//           IconButton(
+//             icon: Icon(_isSearching ? Icons.close : Icons.search),
+//             onPressed: () {
+//               setState(() {
+//                 if (_isSearching) {
+//                   _searchController.clear();
+//                   context.read<NotesProvider>().clearSearch();
+//                 }
+//                 _isSearching = !_isSearching;
+//               });
+//             },
+//           ),
+//           // Sort menu
+//           PopupMenuButton<SortOption>(
+//             icon: const Icon(Icons.sort),
+//             tooltip: 'Sort',
+//             onSelected: (option) {
+//               context.read<NotesProvider>().setSortOption(option);
+//             },
+//             itemBuilder: (context) {
+//               final currentSort = context.read<NotesProvider>().sortOption;
+//               return SortOption.values
+//                   .map(
+//                     (option) => PopupMenuItem(
+//                       value: option,
+//                       child: Row(
+//                         children: [
+//                           if (currentSort == option)
+//                             const Icon(Icons.check, size: 20),
+//                           if (currentSort == option) const SizedBox(width: 8),
+//                           Text(option.displayName),
+//                         ],
+//                       ),
+//                     ),
+//                   )
+//                   .toList();
+//             },
+//           ),
+//           // View mode toggle
+//           IconButton(
+//             icon: Icon(settings.gridView ? Icons.view_list : Icons.grid_view),
+//             tooltip: settings.gridView ? 'List View' : 'Grid View',
+//             onPressed: () => settings.toggleGridView(),
+//           ),
+//           // More menu
+//           PopupMenuButton(
+//             icon: const Icon(Icons.more_vert),
+//             itemBuilder: (context) => [
+//               PopupMenuItem(
+//                 child: const Row(
+//                   children: [
+//                     Icon(Icons.settings, size: 20),
+//                     SizedBox(width: 12),
+//                     Text('Settings'),
+//                   ],
+//                 ),
+//                 onTap: () {
+//                   Future.delayed(Duration.zero, () {
+//                     Navigator.push(
+//                       context,
+//                       MaterialPageRoute(
+//                         builder: (context) => const SettingsScreen(),
+//                       ),
+//                     );
+//                   });
+//                 },
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//       drawer: const FilterDrawer(),
+//       body: Consumer<NotesProvider>(
+//         builder: (context, notesProvider, child) {
+//           if (notesProvider.isLoading) {
+//             return const Center(child: CircularProgressIndicator());
+//           }
+
+//           if (notesProvider.notes.isEmpty) {
+//             return EmptyState(
+//               isSearching: _isSearching,
+//               onClearSearch: () {
+//                 setState(() {
+//                   _searchController.clear();
+//                   notesProvider.clearSearch();
+//                   _isSearching = false;
+//                 });
+//               },
+//             );
+//           }
+
+//           return RefreshIndicator(
+//             onRefresh: () => notesProvider.loadNotes(),
+//             child: settings.gridView
+//                 ? _buildGridView(notesProvider)
+//                 : _buildListView(notesProvider),
+//           );
+//         },
+//       ),
+//       floatingActionButton: FloatingActionButton.extended(
+//         onPressed: () {
+//           Navigator.push(
+//             context,
+//             MaterialPageRoute(builder: (context) => const AddEditNoteScreen()),
+//           );
+//         },
+//         icon: const Icon(Icons.add),
+//         label: const Text('New Note'),
+//       ),
+//     );
+//   }
+
+//   Widget _buildListView(NotesProvider notesProvider) {
+//     return ListView.builder(
+//       padding: const EdgeInsets.all(8),
+//       itemCount: notesProvider.notes.length,
+//       itemBuilder: (context, index) {
+//         final note = notesProvider.notes[index];
+//         return Dismissible(
+//           key: Key(note.id.toString()),
+//           background: Container(
+//             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+//             decoration: BoxDecoration(
+//               color: Colors.red,
+//               borderRadius: BorderRadius.circular(12),
+//             ),
+//             alignment: Alignment.centerRight,
+//             padding: const EdgeInsets.only(right: 20),
+//             child: const Icon(Icons.delete, color: Colors.white),
+//           ),
+//           direction: DismissDirection.endToStart,
+//           confirmDismiss: (direction) async {
+//             final settings = context.read<SettingsProvider>();
+//             if (!settings.confirmDelete) return true;
+
+//             return await showDialog(
+//               context: context,
+//               builder: (context) => AlertDialog(
+//                 title: const Text('Delete Note'),
+//                 content: const Text(
+//                   'Are you sure you want to delete this note?',
+//                 ),
+//                 actions: [
+//                   TextButton(
+//                     onPressed: () => Navigator.pop(context, false),
+//                     child: const Text('Cancel'),
+//                   ),
+//                   TextButton(
+//                     onPressed: () => Navigator.pop(context, true),
+//                     child: const Text(
+//                       'Delete',
+//                       style: TextStyle(color: Colors.red),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             );
+//           },
+//           onDismissed: (direction) {
+//             notesProvider.deleteNote(note.id!);
+//             ScaffoldMessenger.of(
+//               context,
+//             ).showSnackBar(const SnackBar(content: Text('Note deleted')));
+//           },
+//           child: NoteCard(note: note),
+//         );
+//       },
+//     );
+//   }
+
+//   Widget _buildGridView(NotesProvider notesProvider) {
+//     return GridView.builder(
+//       padding: const EdgeInsets.all(8),
+//       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//         crossAxisCount: 2,
+//         childAspectRatio: 0.85,
+//         crossAxisSpacing: 8,
+//         mainAxisSpacing: 8,
+//       ),
+//       itemCount: notesProvider.notes.length,
+//       itemBuilder: (context, index) {
+//         final note = notesProvider.notes[index];
+//         return NoteGridItem(note: note);
+//       },
+//     );
+//   }
+// }
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:noteale_v2/core/version_checker_v2.dart';
@@ -23,13 +281,93 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+
+  // -------------------
+  // MULTI-SELECT (GRID)
+  // -------------------
+  bool _isSelectionMode = false;
+  final Set<int> _selectedIds = {};
+
+  void _toggleSelectionMode(bool enable) {
+    setState(() {
+      _isSelectionMode = enable;
+      if (!enable) _selectedIds.clear();
+    });
+  }
+
+  void _toggleSelect(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _selectAll(List<int> allIds) {
+    setState(() {
+      if (_selectedIds.length == allIds.length) {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      } else {
+        _selectedIds.addAll(allIds);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  Future<void> _deleteSelected(BuildContext context) async {
+    if (_selectedIds.isEmpty) return;
+
+    final notesProvider = context.read<NotesProvider>();
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Notes"),
+        content: Text(
+          "Are you sure you want to delete ${_selectedIds.length} selected notes?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      for (var id in _selectedIds) {
+        await notesProvider.deleteNote(id);
+      }
+      _toggleSelectionMode(false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Notes deleted")));
+      }
+    }
+  }
+
+  // -------------------
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (kDebugMode) {
-        // Mock for testing
         PlayStoreUpdateChecker.showMockUpdateDialog(context);
       } else {
         PlayStoreUpdateChecker.checkForUpdate(context);
@@ -49,7 +387,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
+        title: _isSelectionMode
+            ? Text("${_selectedIds.length} selected")
+            : _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
@@ -62,85 +402,120 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               )
             : const Text('DailyNotes'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _searchController.clear();
-                  context.read<NotesProvider>().clearSearch();
-                }
-                _isSearching = !_isSearching;
-              });
-            },
-          ),
-          // Sort menu
-          PopupMenuButton<SortOption>(
-            icon: const Icon(Icons.sort),
-            tooltip: 'Sort',
-            onSelected: (option) {
-              context.read<NotesProvider>().setSortOption(option);
-            },
-            itemBuilder: (context) {
-              final currentSort = context.read<NotesProvider>().sortOption;
-              return SortOption.values
-                  .map(
-                    (option) => PopupMenuItem(
-                      value: option,
-                      child: Row(
+
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => _toggleSelectionMode(false),
+              )
+            : Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.select_all),
+                  onPressed: () {
+                    final ids = context
+                        .read<NotesProvider>()
+                        .notes
+                        .map((e) => e.id!)
+                        .toList();
+                    _selectAll(ids);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => _deleteSelected(context),
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: Icon(_isSearching ? Icons.close : Icons.search),
+                  onPressed: () {
+                    setState(() {
+                      if (_isSearching) {
+                        _searchController.clear();
+                        context.read<NotesProvider>().clearSearch();
+                      }
+                      _isSearching = !_isSearching;
+                    });
+                  },
+                ),
+
+                // Sort menu
+                PopupMenuButton<SortOption>(
+                  icon: const Icon(Icons.sort),
+                  tooltip: 'Sort',
+                  onSelected: (option) {
+                    context.read<NotesProvider>().setSortOption(option);
+                  },
+                  itemBuilder: (context) {
+                    final currentSort = context
+                        .read<NotesProvider>()
+                        .sortOption;
+                    return SortOption.values
+                        .map(
+                          (option) => PopupMenuItem(
+                            value: option,
+                            child: Row(
+                              children: [
+                                if (currentSort == option)
+                                  const Icon(Icons.check, size: 20),
+                                if (currentSort == option)
+                                  const SizedBox(width: 8),
+                                Text(option.displayName),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList();
+                  },
+                ),
+
+                // View mode toggle
+                IconButton(
+                  icon: Icon(
+                    settings.gridView ? Icons.view_list : Icons.grid_view,
+                  ),
+                  tooltip: settings.gridView ? 'List View' : 'Grid View',
+                  onPressed: () => settings.toggleGridView(),
+                ),
+
+                // More menu
+                PopupMenuButton(
+                  icon: const Icon(Icons.more_vert),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      child: const Row(
                         children: [
-                          if (currentSort == option)
-                            const Icon(Icons.check, size: 20),
-                          if (currentSort == option) const SizedBox(width: 8),
-                          Text(option.displayName),
+                          Icon(Icons.settings, size: 20),
+                          SizedBox(width: 12),
+                          Text('Settings'),
                         ],
                       ),
+                      onTap: () {
+                        Future.delayed(Duration.zero, () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsScreen(),
+                            ),
+                          );
+                        });
+                      },
                     ),
-                  )
-                  .toList();
-            },
-          ),
-          // View mode toggle
-          IconButton(
-            icon: Icon(settings.gridView ? Icons.view_list : Icons.grid_view),
-            tooltip: settings.gridView ? 'List View' : 'Grid View',
-            onPressed: () => settings.toggleGridView(),
-          ),
-          // More menu
-          PopupMenuButton(
-            icon: const Icon(Icons.more_vert),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: const Row(
-                  children: [
-                    Icon(Icons.settings, size: 20),
-                    SizedBox(width: 12),
-                    Text('Settings'),
                   ],
                 ),
-                onTap: () {
-                  Future.delayed(Duration.zero, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
+              ],
       ),
+
       drawer: const FilterDrawer(),
+
       body: Consumer<NotesProvider>(
         builder: (context, notesProvider, child) {
           if (notesProvider.isLoading) {
@@ -161,26 +536,32 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => notesProvider.loadNotes(),
+            onRefresh: notesProvider.loadNotes,
             child: settings.gridView
                 ? _buildGridView(notesProvider)
                 : _buildListView(notesProvider),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddEditNoteScreen()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Note'),
-      ),
+
+      floatingActionButton: _isSelectionMode || _isSearching
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddEditNoteScreen()),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('New Note'),
+            ),
     );
   }
 
+  // -----------------------------
+  // LIST VIEW (unchanged - no multiselect)
+  // -----------------------------
   Widget _buildListView(NotesProvider notesProvider) {
     return ListView.builder(
       padding: const EdgeInsets.all(8),
@@ -206,11 +587,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             return await showDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Delete Note'),
-                content: const Text(
-                  'Are you sure you want to delete this note?',
-                ),
+              builder: (_) => AlertDialog(
+                title: const Text('Delete'),
+                content: const Text('Delete this note?'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
@@ -227,7 +606,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
-          onDismissed: (direction) {
+          onDismissed: (_) {
             notesProvider.deleteNote(note.id!);
             ScaffoldMessenger.of(
               context,
@@ -239,6 +618,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // -----------------------------
+  // GRID VIEW (with multi-select)
+  // -----------------------------
   Widget _buildGridView(NotesProvider notesProvider) {
     return GridView.builder(
       padding: const EdgeInsets.all(8),
@@ -251,7 +633,46 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: notesProvider.notes.length,
       itemBuilder: (context, index) {
         final note = notesProvider.notes[index];
-        return NoteGridItem(note: note);
+        final isSelected = _selectedIds.contains(note.id);
+
+        return GestureDetector(
+          onLongPress: () {
+            if (!_isSelectionMode) {
+              _toggleSelectionMode(true);
+              _toggleSelect(note.id!);
+            }
+          },
+          onTap: () {
+            if (_isSelectionMode) {
+              _toggleSelect(note.id!);
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddEditNoteScreen(note: note),
+                ),
+              );
+            }
+          },
+          child: Stack(
+            children: [
+              NoteGridItem(note: note),
+
+              if (_isSelectionMode)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Icon(
+                    isSelected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    size: 26,
+                    color: isSelected ? Colors.blue : Colors.grey,
+                  ),
+                ),
+            ],
+          ),
+        );
       },
     );
   }

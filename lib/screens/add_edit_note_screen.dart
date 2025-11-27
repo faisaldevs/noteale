@@ -376,6 +376,10 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   bool _isEditable = false;
   bool _isSaving = false;
   Timer? _autoSaveTimer;
+
+  // Local mutable copy of note (IMPORTANT FIX)
+  Note? _note;
+
   String? _selectedColor;
   String? _selectedCategory;
 
@@ -399,17 +403,19 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize controller with combined title + content
-    final combined = widget.note != null
-        ? widget.note!.title +
-              (widget.note!.content.isNotEmpty
-                  ? '\n${widget.note!.content}'
-                  : '')
+
+    // Store the note locally so we can update it
+    _note = widget.note;
+
+    final combined = _note != null
+        ? _note!.title +
+              (_note!.content.isNotEmpty ? '\n${_note!.content}' : '')
         : '';
+
     _controller = TextEditingController(text: combined);
 
-    _selectedColor = widget.note?.color;
-    _selectedCategory = widget.note?.category;
+    _selectedColor = _note?.color;
+    _selectedCategory = _note?.category;
 
     // Auto-save setup
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -444,35 +450,47 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
 
     try {
       final lines = _controller.text.split('\n');
-      final title = lines.isNotEmpty ? lines.first.trim() : 'Untitled';
+      final title = lines.first.trim().isEmpty
+          ? "Untitled"
+          : lines.first.trim();
       final content = lines.length > 1
           ? lines.sublist(1).join('\n').trim()
           : '';
+
       final now = DateTime.now();
 
       final note = Note(
-        id: widget.note?.id,
+        id: _note?.id,
         title: title,
         content: content,
         color: _selectedColor,
         category: _selectedCategory,
-        createdAt: widget.note?.createdAt ?? now,
+        createdAt: _note?.createdAt ?? now,
         updatedAt: now,
-        isPinned: widget.note?.isPinned ?? false,
-        isFavorite: widget.note?.isFavorite ?? false,
+        isPinned: _note?.isPinned ?? false,
+        isFavorite: _note?.isFavorite ?? false,
       );
 
       final notesProvider = context.read<NotesProvider>();
 
-      if (widget.note == null) {
-        await notesProvider.addNote(note);
+      if (_note == null) {
+        // CREATE NOTE
+        final newId = await notesProvider.addNote(note);
+
+        // Store updated note (with new ID)
+        setState(() {
+          _note = note.copyWith(id: newId.id);
+        });
+
         if (mounted && showSnackbar) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Note created')));
         }
       } else {
+        // UPDATE EXISTING NOTE
         await notesProvider.updateNote(note);
+
         if (mounted && showSnackbar) {
           ScaffoldMessenger.of(
             context,
@@ -501,40 +519,22 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
 
   int get _wordCount {
     final text = _controller.text.trim();
-    if (text.isEmpty) return 0;
-    return text.split(RegExp(r'\s+')).length;
+    return text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
   }
 
   Widget _buildColorChip(String? color, String label) {
     final isSelected = _selectedColor == color;
-    Color chipColor;
 
-    if (color == null) {
-      chipColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-    } else {
-      switch (color) {
-        case 'red':
-          chipColor = Colors.red.shade100;
-          break;
-        case 'blue':
-          chipColor = Colors.blue.shade100;
-          break;
-        case 'green':
-          chipColor = Colors.green.shade100;
-          break;
-        case 'yellow':
-          chipColor = Colors.yellow.shade100;
-          break;
-        case 'purple':
-          chipColor = Colors.purple.shade100;
-          break;
-        case 'orange':
-          chipColor = Colors.orange.shade100;
-          break;
-        default:
-          chipColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-      }
-    }
+    final chipColor = color == null
+        ? Theme.of(context).colorScheme.surfaceContainerHighest
+        : {
+            'red': Colors.red.shade100,
+            'blue': Colors.blue.shade100,
+            'green': Colors.green.shade100,
+            'yellow': Colors.yellow.shade100,
+            'purple': Colors.purple.shade100,
+            'orange': Colors.orange.shade100,
+          }[color]!;
 
     return ChoiceChip(
       label: Text(
@@ -545,9 +545,7 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
       ),
       selected: isSelected,
       onSelected: (selected) {
-        setState(() {
-          _selectedColor = selected ? color : null;
-        });
+        setState(() => _selectedColor = selected ? color : null);
       },
       backgroundColor: chipColor,
       selectedColor: chipColor,
@@ -566,14 +564,13 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
 
     return GestureDetector(
       onTap: _isEditable ? null : _enableEditing,
-      behavior: HitTestBehavior.translucent,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Freehand Note'),
           actions: [
             if (_isSaving)
               const Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16),
                 child: SizedBox(
                   width: 20,
                   height: 20,
@@ -588,11 +585,11 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Category dropdown
+              // CATEGORY
               Row(
                 children: [
                   const Text(
-                    'Category: ',
+                    'Category:',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
@@ -606,16 +603,15 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
                         )
                         .toList(),
                     onChanged: (val) {
-                      setState(() {
-                        _selectedCategory = val;
-                      });
+                      setState(() => _selectedCategory = val);
                     },
                   ),
                 ],
               ),
+
               const SizedBox(height: 16),
 
-              // Color selection
+              // COLORS
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -630,9 +626,10 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
                   ],
                 ),
               ),
+
               const SizedBox(height: 16),
 
-              // Freehand TextField
+              // TEXT FIELD
               Expanded(
                 child: AbsorbPointer(
                   absorbing: !_isEditable,
@@ -641,13 +638,12 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
                     focusNode: _focusNode,
                     maxLines: null,
                     keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
                     style: const TextStyle(fontSize: 18),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: _isEditable
-                          ? 'Start writing your note...'
-                          : 'Tap anywhere to edit...',
+                          ? "Start writing your note..."
+                          : "Tap anywhere to edit...",
                       suffixIcon: settings.showWordCount
                           ? Padding(
                               padding: const EdgeInsets.all(12),

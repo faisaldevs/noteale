@@ -46,12 +46,13 @@ class NotesProvider with ChangeNotifier {
   }
 
   /// Add a new note
-  Future<void> addNote(Note note) async {
+  Future<Note> addNote(Note note) async {
     try {
       final newNote = await DatabaseHelper.instance.createNote(note);
       _notes.insert(0, newNote);
       _applyFiltersAndSort();
       notifyListeners();
+      return newNote; // ← return the created note
     } catch (e) {
       debugPrint('Error adding note: $e');
       rethrow;
