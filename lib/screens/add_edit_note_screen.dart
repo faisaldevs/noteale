@@ -359,6 +359,7 @@ import 'package:flutter/material.dart';
 import 'package:noteale_v2/model/note.dart';
 import 'package:noteale_v2/providers/note_provider.dart';
 import 'package:noteale_v2/providers/setting_provider.dart';
+import 'package:noteale_v2/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 
 class AddEditNoteScreen extends StatefulWidget {
@@ -498,7 +499,15 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
         }
       }
 
-      if (mounted && showSnackbar) Navigator.pop(context);
+      if (mounted && showSnackbar) {
+        // Navigator.pop(context);
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+          (route) => false, // ← removes all previous routes
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -612,22 +621,22 @@ class _AddEditNoteScreenState extends State<AddEditNoteScreen> {
               const SizedBox(height: 16),
 
               // COLORS
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildColorChip(null, 'None'),
-                    ..._colorOptions.map(
-                      (c) => Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: _buildColorChip(c, c),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // SingleChildScrollView(
+              //   scrollDirection: Axis.horizontal,
+              //   child: Row(
+              //     children: [
+              //       _buildColorChip(null, 'None'),
+              //       ..._colorOptions.map(
+              //         (c) => Padding(
+              //           padding: const EdgeInsets.only(left: 8.0),
+              //           child: _buildColorChip(c, c),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
-              const SizedBox(height: 16),
+              // const SizedBox(height: 16),
 
               // TEXT FIELD
               Expanded(

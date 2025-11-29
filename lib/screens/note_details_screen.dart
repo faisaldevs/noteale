@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:noteale_v2/model/note.dart';
 import 'package:noteale_v2/providers/note_provider.dart';
 import 'package:noteale_v2/providers/setting_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 
 import 'add_edit_note_screen.dart';
 
@@ -17,29 +17,31 @@ class NoteDetailScreen extends StatelessWidget {
   /// Delete note with confirmation
   Future<void> _deleteNote(BuildContext context) async {
     final settings = context.read<SettingsProvider>();
-    
+
     bool confirmed = true;
     if (settings.confirmDelete) {
-      confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete Note'),
-          content: const Text('Are you sure you want to delete this note?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+      confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Note'),
+              content: const Text('Are you sure you want to delete this note?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        ),
-      ) ?? false;
+          ) ??
+          false;
     }
 
     if (confirmed && context.mounted) {
@@ -47,15 +49,15 @@ class NoteDetailScreen extends StatelessWidget {
         await context.read<NotesProvider>().deleteNote(note.id!);
         if (context.mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Note deleted')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Note deleted')));
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting note: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting note: $e')));
         }
       }
     }
@@ -164,7 +166,9 @@ class NoteDetailScreen extends StatelessWidget {
             onPressed: () {
               context.read<NotesProvider>().toggleFavorite(note);
             },
-            tooltip: note.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+            tooltip: note.isFavorite
+                ? 'Remove from Favorites'
+                : 'Add to Favorites',
           ),
           IconButton(
             icon: const Icon(Icons.edit),
@@ -198,11 +202,22 @@ class NoteDetailScreen extends StatelessWidget {
             // Title
             Text(
               note.title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+
+            // Content
+            SelectableText(
+              note.content,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(height: 1.6),
+            ),
+
+            const Divider(height: 32),
+
+            // const SizedBox(height: 12),
 
             // Date info
             Row(
@@ -216,8 +231,8 @@ class NoteDetailScreen extends StatelessWidget {
                 Text(
                   'Created: ${dateFormat.format(note.createdAt)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -233,8 +248,8 @@ class NoteDetailScreen extends StatelessWidget {
                 Text(
                   'Updated: ${dateFormat.format(note.updatedAt)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -253,8 +268,8 @@ class NoteDetailScreen extends StatelessWidget {
                   Text(
                     '${note.wordCount} words • ${note.characterCount} characters',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -284,10 +299,10 @@ class NoteDetailScreen extends StatelessWidget {
                     Text(
                       note.category!,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSecondaryContainer,
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSecondaryContainer,
+                      ),
                     ),
                   ],
                 ),
@@ -308,16 +323,6 @@ class NoteDetailScreen extends StatelessWidget {
                 }).toList(),
               ),
             ],
-
-            const Divider(height: 32),
-
-            // Content
-            SelectableText(
-              note.content,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    height: 1.6,
-                  ),
-            ),
           ],
         ),
       ),
